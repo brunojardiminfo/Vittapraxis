@@ -1,0 +1,518 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Conexão com pooler: é o que as funções serverless usam, senão o banco
+  // esgota conexões conforme o Vercel escala.
+  url       = env("DATABASE_URL")
+  // Migrations precisam de conexão direta — o pooler não suporta os comandos
+  // que o Prisma usa para aplicar migrations.
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ---------------------------------------------------------------------------
+// Autenticação
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  senhaHash    String
+  nome         String
+  papel        String // PACIENTE | ADMIN
+  /// Última vez que a pessoa abriu a plataforma — alimenta a gestão no admin
+  ultimoAcesso DateTime?
+  criadoEm     DateTime  @default(now())
+
+  paciente Paciente?
+  sessoes  Sessao[]
+}
+
+model Sessao {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  usuarioId String
+  expiraEm  DateTime
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+}
+
+// ---------------------------------------------------------------------------
+// Pessoas
+// ---------------------------------------------------------------------------
+
+model Paciente {
+  id                String    @id @default(cuid())
+  usuarioId         String    @unique
+  cpf               String?
+  telefone          String?
+  dataNascimento    DateTime?
+  endereco          String?
+  emergenciaNome    String?
+  emergenciaVinculo String?
+  emergenciaFone    String?
+  consentimentoLgpd Boolean   @default(false)
+  /// Separado de telefone: é por aqui que a clínica fala com o paciente
+  whatsapp          String?
+  cashback          Float     @default(0)
+  pontos            Int       @default(0)
+  codigoIndicacao   String    @unique
+
+  usuario        Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  agendamentos   Agendamento[]
+  pacotes        Pacote[]
+  indices        IndiceBemEstar[]
+  indicacoes     Indicacao[]         @relation("IndicacoesFeitas")
+  /// A indicação que trouxe esta pessoa, quando ela chegou por um convite
+  indicadaPor    Indicacao?          @relation("IndicacaoRecebida")
+  pedidos        PedidoAgendamento[]
+  feedbacks      Feedback[]
+  lancamentos    LancamentoClube[]
+  vouchers       Voucher[]
+  sorteiosGanhos Sorteio[]
+  pedidoVales    PedidoVale[]
+}
+
+/// Profissional não tem login: quem opera o sistema é a administração. Por
+/// isso o nome vive aqui, e não emprestado de um Usuario.
+model Profissional {
+  id            String  @id @default(cuid())
+  nome          String
+  especialidade String
+  bio           String
+  iniciais      String
+  /// Caminho da foto em /public/equipe. Nulo cai no avatar de iniciais.
+  foto          String?
+  /// Destaca a direção clínica na landing
+  ehDiretor     Boolean @default(false)
+  /// Credencial exibida junto ao nome, ex.: "20 anos de experiência"
+  credencial    String?
+  /// Ordena a listagem pública por área de atuação
+  ordem         Int     @default(0)
+  ativo         Boolean @default(true)
+
+  servicos     Servico[]
+  agendamentos Agendamento[]
+  pacotes      Pacote[]
+  pedidos      PedidoAgendamento[]
+}
+
+// ---------------------------------------------------------------------------
+// Serviços e agenda
+// ---------------------------------------------------------------------------
+
+model Servico {
+  id                  String  @id @default(cuid())
+  nome                String
+  categoria           String
+  descricao           String
+  beneficios          String // itens separados por "|"
+  duracaoMin          Int
+  precoAvulso         Float
+  precoEmPlano        Float?
+  ordem               Int     @default(0)
+  /// Pontos do Clube por sessão deste serviço. Nulo usa o padrão global de
+  /// Configuracao.pontosPorSessao — assim a clínica só preenche onde quer
+  /// fugir da regra geral.
+  pontos              Int?
+  /// Serviço fora de linha some do catálogo sem apagar o histórico
+  ativo               Boolean @default(true)
+  /// Desconto de aniversário deste serviço, em %. Nulo = não participa.
+  descontoAniversario Float?
+
+  profissionais Profissional[]
+  agendamentos  Agendamento[]
+  pacotes       Pacote[]
+  pedidos       PedidoAgendamento[]
+  vouchers      Voucher[]
+}
+
+model Agendamento {
+  id             String    @id @default(cuid())
+  pacienteId     String
+  profissionalId String
+  servicoId      String
+  inicio         DateTime
+  duracaoMin     Int
+  sala           String?
+  status         String // AGENDADO | CONFIRMADO | EM_ATENDIMENTO | CONCLUIDO | CANCELADO
+  checkinEm      DateTime?
+  criadoEm       DateTime  @default(now())
+
+  paciente     Paciente         @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  profissional Profissional     @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  servico      Servico          @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  indice       IndiceBemEstar?
+  lancamento   LancamentoClube?
+
+  @@index([pacienteId])
+  @@index([profissionalId])
+  @@index([inicio])
+}
+
+model Pacote {
+  id                 String   @id @default(cuid())
+  pacienteId         String
+  servicoId          String
+  profissionalId     String?
+  sessoesContratadas Int
+  sessoesUtilizadas  Int      @default(0)
+  validade           DateTime
+  status             String // ATIVO | CONCLUIDO | EXPIRADO
+  criadoEm           DateTime @default(now())
+
+  paciente     Paciente      @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  servico      Servico       @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: SetNull)
+
+  @@index([pacienteId])
+}
+
+// ---------------------------------------------------------------------------
+// Índice de Bem-Estar
+// ---------------------------------------------------------------------------
+
+model IndiceBemEstar {
+  id            String   @id @default(cuid())
+  pacienteId    String
+  agendamentoId String?  @unique
+  humor         Int // 1..5
+  sono          Int // 1..5
+  /// 1..5, quanto a pessoa bebeu de água hoje
+  hidratacao    Int      @default(3)
+  dor           Int // 0..10
+  /// Se já se exercitou hoje
+  exercitou     Boolean  @default(false)
+  observacao    String?
+  respondidoEm  DateTime @default(now())
+
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+
+  @@index([pacienteId])
+}
+
+// ---------------------------------------------------------------------------
+// Conteúdo e benefícios
+// ---------------------------------------------------------------------------
+
+model Conteudo {
+  id          String   @id @default(cuid())
+  titulo      String
+  resumo      String
+  corpo       String
+  tipo        String // ARTIGO | VIDEO | RECEITA | TUTORIAL
+  categoria   String
+  /// Link do vídeo, quando o tipo é VIDEO. Normalmente YouTube.
+  url         String?
+  publicadoEm DateTime @default(now())
+}
+
+/// Alguém que entrou usando o código de um paciente.
+///
+/// Fica PENDENTE até a pessoa indicada de fato fazer uma sessão — o cashback
+/// é promessa de quem trouxe cliente, não de quem só espalhou o link. Quem
+/// paga é a primeira sessão concluída, e é ela que vira CONFIRMADA.
+model Indicacao {
+  id         String   @id @default(cuid())
+  pacienteId String
+  nome       String
+  status     String // PENDENTE | CONFIRMADA
+  /// Lead que originou, para a recepção achar o contato
+  leadId     String?  @unique
+  /// Preenchido quando a pessoa indicada vira paciente. É por ele que a
+  /// conclusão da primeira sessão encontra quem tem cashback a receber.
+  indicadoId String?  @unique
+  criadoEm   DateTime @default(now())
+
+  paciente    Paciente          @relation("IndicacoesFeitas", fields: [pacienteId], references: [id], onDelete: Cascade)
+  indicado    Paciente?         @relation("IndicacaoRecebida", fields: [indicadoId], references: [id], onDelete: SetNull)
+  lancamentos LancamentoClube[]
+
+  @@index([pacienteId])
+}
+
+/// Todo movimento de pontos e cashback, inclusive ajuste manual.
+///
+/// O saldo em Paciente continua sendo a fonte para leitura rápida, mas nunca
+/// muda sozinho: quem mexe passa por aqui e deixa motivo e autor. Sem isso não
+/// dá para explicar ao paciente por que o saldo dele mudou.
+model LancamentoClube {
+  id         String   @id @default(cuid())
+  pacienteId String
+  tipo       String // PONTOS | CASHBACK
+  /// Positivo credita, negativo debita
+  valor      Float
+  motivo     String
+  origem     String // SESSAO | INDICACAO | AJUSTE | RESGATE
+  /// Nome de quem lançou; nulo quando foi o próprio sistema
+  autor      String?
+  criadoEm   DateTime @default(now())
+
+  /// Preenchidos quando o lançamento nasce de um fato: o índice único impede
+  /// creditar a mesma sessão ou indicação duas vezes.
+  agendamentoId String? @unique
+  indicacaoId   String? @unique
+
+  paciente    Paciente     @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+  indicacao   Indicacao?   @relation(fields: [indicacaoId], references: [id], onDelete: SetNull)
+
+  @@index([pacienteId, criadoEm])
+}
+
+/// Regras do Clube, editáveis pela administração.
+///
+/// Linha única com id fixo: são parâmetros do negócio, não uma coleção. O
+/// upsert por esse id garante que nunca exista mais de uma configuração
+/// valendo ao mesmo tempo.
+model Configuracao {
+  id                     String   @id @default("unica")
+  /// Pontos pelo cadastro somado à primeira sessão concluída — uma única vez
+  pontosCadastro         Int      @default(500)
+  /// Pontos por sessão concluída; cada serviço pode ter o seu próprio valor
+  pontosPorSessao        Int      @default(100)
+  /// Pontos por pacote adquirido
+  pontosPorPacote        Int      @default(500)
+  /// Crédito em reais liberado a quem indica, quando a indicada se trata
+  cashbackPorIndicacao   Float    @default(50)
+  /// Meses de validade de cada crédito, contados da concessão
+  validadeCreditoMeses   Int      @default(12)
+  /// Quantos vouchers de aniversário cada paciente recebe por ano
+  vouchersAniversarioAno Int      @default(1)
+  atualizadoEm           DateTime @updatedAt
+}
+
+/// Faixa do Clube — nome, degrau de entrada e o que ela dá.
+///
+/// Virou tabela porque a direção muda nome, ordem e corte sem depender de
+/// deploy: o PDF já reorganizou as faixas uma vez, e nada garante que seja a
+/// última. O degrau é "a partir de", e a faixa de entrada começa em zero.
+model NivelClube {
+  id        String   @id @default(cuid())
+  nome      String   @unique
+  /// Pontos a partir dos quais a pessoa entra nesta faixa
+  minimo    Int
+  beneficio String
+  ordem     Int      @default(0)
+  criadoEm  DateTime @default(now())
+
+  @@index([minimo])
+}
+
+/// Voucher concedido a um paciente — aniversário, indicação ou cortesia.
+///
+/// Nasce com validade e morre quando é usado ou quando vence. O registro de
+/// quem emitiu e de quem resgatou é o que permite explicar meses depois por
+/// que um desconto foi dado.
+model Voucher {
+  id          String    @id @default(cuid())
+  pacienteId  String
+  tipo        String // ANIVERSARIO | INDICACAO | CORTESIA
+  titulo      String
+  descricao   String?
+  /// Desconto em porcentagem, quando o voucher é de desconto
+  percentual  Float?
+  /// Valor em reais, quando o voucher é de crédito
+  valor       Float?
+  /// Serviço a que se aplica; nulo vale para os participantes
+  servicoId   String?
+  status      String    @default("DISPONIVEL") // DISPONIVEL | USADO | EXPIRADO | CANCELADO
+  validoDe    DateTime  @default(now())
+  validoAte   DateTime
+  usadoEm     DateTime?
+  /// Nome de quem registrou o uso no balcão
+  usadoPor    String?
+  /// Quando nasce de uma indicação, aponta para ela
+  indicacaoId String?
+  criadoEm    DateTime  @default(now())
+
+  paciente Paciente    @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  servico  Servico?    @relation(fields: [servicoId], references: [id], onDelete: SetNull)
+  vale     PedidoVale?
+
+  @@index([pacienteId, status])
+  @@index([validoAte])
+}
+
+/// Sorteio mensal do Clube.
+///
+/// Os participantes são congelados no momento do sorteio, e não recalculados
+/// depois: sem isso, um paciente que mudasse de faixa semanas depois faria o
+/// resultado passado parecer errado.
+model Sorteio {
+  id            String    @id @default(cuid())
+  titulo        String
+  premio        String
+  /// Faixa mínima para concorrer; nulo abre para todo o Clube
+  nivelMinimo   String?
+  /// Janela considerada para apurar quem estava elegível
+  inicioEm      DateTime
+  fimEm         DateTime
+  status        String    @default("ABERTO") // ABERTO | SORTEADO | CANCELADO
+  sorteadoEm    DateTime?
+  /// Nome de quem apurou
+  sorteadoPor   String?
+  ganhadorId    String?
+  /// Quantos concorriam quando foi sorteado — a prova do tamanho do bolo
+  participantes Int       @default(0)
+  criadoEm      DateTime  @default(now())
+
+  ganhador Paciente? @relation(fields: [ganhadorId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+/// Imagem enviada pela clínica, guardada no próprio banco.
+///
+/// O disco da Vercel é somente leitura em produção, então gravar em /public
+/// não é opção. Um serviço de blob resolveria, mas exigiria a clínica criar e
+/// manter mais uma conta; para os poucos cartões de oferta que ela publica, o
+/// banco dá conta — as imagens chegam comprimidas em webp e pesam dezenas de
+/// quilobytes.
+model Arquivo {
+  id       String   @id @default(cuid())
+  nome     String
+  tipo     String
+  /// Bytes do arquivo já convertido e redimensionado
+  dados    Bytes
+  largura  Int
+  altura   Int
+  tamanho  Int
+  criadoEm DateTime @default(now())
+}
+
+/// Cartão de oferta ou aviso que roda no topo do portal do paciente.
+///
+/// Vive no banco e não no código porque quem cria é a clínica, e promoção
+/// tem prazo: nasce e morre sem precisar de deploy.
+model Destaque {
+  id        String    @id @default(cuid())
+  titulo    String
+  texto     String
+  /// Rótulo pequeno acima do título, ex.: "Só até sexta"
+  etiqueta  String?
+  /// Caminho de imagem em /public, quando o cartão tem foto
+  imagem    String?
+  /// Para onde o botão leva; nulo deixa o cartão sem ação
+  link      String?
+  linkTexto String?
+  ordem     Int       @default(0)
+  ativo     Boolean   @default(true)
+  /// Fora dessa janela o cartão não aparece. Nulo é "sem limite".
+  inicioEm  DateTime?
+  fimEm     DateTime?
+  criadoEm  DateTime  @default(now())
+
+  @@index([ativo, ordem])
+}
+
+model Faq {
+  id       String @id @default(cuid())
+  pergunta String
+  resposta String
+  ordem    Int    @default(0)
+}
+
+/// Contato de quem ainda não é paciente, vindo do site. Fica separado de
+/// Paciente porque aqui não existe cadastro nem login — a administração
+/// converte em paciente depois do primeiro contato.
+model Lead {
+  id          String   @id @default(cuid())
+  nome        String
+  email       String
+  telefone    String
+  interesse   String? // serviço de interesse, texto livre
+  mensagem    String?
+  /// Código de quem indicou, quando a pessoa chegou por um convite do Clube
+  indicadoPor String?
+  origem      String   @default("SITE")
+  status      String   @default("NOVO") // NOVO | EM_CONTATO | CONVERTIDO | ARQUIVADO
+  criadoEm    DateTime @default(now())
+
+  @@index([status])
+}
+
+/// Registro de que o paciente pediu horário pelo WhatsApp. Não é fila de
+/// trabalho: quem agenda de fato é a clínica, no Clínica Ágil. Serve para a
+/// administração enxergar demanda — qual serviço puxa mais, que horário falta.
+model PedidoAgendamento {
+  id             String   @id @default(cuid())
+  pacienteId     String
+  servicoId      String
+  /// Preferência do paciente; nulo significa "qualquer profissional"
+  profissionalId String?
+  periodo        String // MANHA | TARDE | QUALQUER
+  /// Dias da semana preferidos, separados por "|" (ex.: "SEG|QUA")
+  diasPreferidos String?
+  observacao     String?
+  criadoEm       DateTime @default(now())
+
+  paciente     Paciente      @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  servico      Servico       @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: SetNull)
+
+  @@index([pacienteId])
+  @@index([criadoEm])
+}
+
+/// Elogio, sugestão ou reclamação vinda do paciente.
+model Feedback {
+  id         String   @id @default(cuid())
+  pacienteId String
+  tipo       String // ELOGIO | SUGESTAO | RECLAMACAO
+  assunto    String
+  mensagem   String
+  status     String   @default("ABERTO") // ABERTO | LIDO | RESOLVIDO
+  resposta   String?
+  criadoEm   DateTime @default(now())
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+/// Pedido de vale-presente feito pelo site. O pagamento acontece fora, como a
+/// clínica já faz hoje; aqui fica só o registro para acompanhamento.
+model PedidoVale {
+  id          String   @id @default(cuid())
+  deNome      String
+  deContato   String
+  paraNome    String
+  /// Valor em reais, ou nulo quando o presente é um serviço específico
+  valor       Float?
+  /// Serviço escolhido, quando o presente é uma sessão e não um valor
+  servicoId   String?
+  servicoNome String?
+  mensagem    String?
+  status      String   @default("NOVO") // NOVO | EMITIDO | USADO | CANCELADO
+  criadoEm    DateTime @default(now())
+
+  /// Código que quem recebe apresenta no balcão.
+  ///
+  /// Existe porque o presenteado quase nunca é paciente ainda — é justamente
+  /// o que o presente tenta mudar. O código vale por si, e só vira voucher no
+  /// portal quando a pessoa tiver conta.
+  codigo     String?   @unique
+  validoAte  DateTime?
+  emitidoEm  DateTime?
+  /// Nome de quem emitiu no balcão
+  emitidoPor String?
+  usadoEm    DateTime?
+  usadoPor   String?
+
+  /// Preenchido quando o presenteado já é paciente: aí o vale também aparece
+  /// no portal dele como voucher.
+  pacienteId String?
+  voucherId  String? @unique
+
+  paciente Paciente? @relation(fields: [pacienteId], references: [id], onDelete: SetNull)
+  voucher  Voucher?  @relation(fields: [voucherId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}

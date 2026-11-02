@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Vitapraxis — design tokens
+   Paleta da identidade: verde #14312A, dourado #CEA16E, creme #F7EDE7.
+   ========================================================================== */
+
+@theme {
+  /* Paleta oficial da clínica: verde #14312A, dourado #CEA16E, creme #F7EDE7.
+     As outras três são derivadas, não cores novas — o dourado da marca dá só
+     2:1 sobre o creme, então serve para preencher e decorar, nunca para texto
+     pequeno. O -deep é o mesmo matiz escurecido até 4.6:1, que é o que a
+     leitura exige; o -pale é o mesmo dourado clareado para texto sobre o
+     verde. */
+  --color-vp-green: #14312a;
+  --color-vp-green-deep: #0c1f1a;
+  --color-vp-gold: #cea16e;
+  --color-vp-gold-deep: #8f6231;
+  --color-vp-gold-pale: #e8d3b8;
+  --color-vp-cream: #f7ede7;
+
+  /* As duas únicas famílias do site. --fonte-* vem do next/font no layout
+     raiz; o resto da pilha só entra se o webfont falhar em carregar. */
+  --font-serif: var(--fonte-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--fonte-sans), -apple-system, "Segoe UI", sans-serif;
+
+  /* Um degrau abaixo do padrão do Tailwind em toda a escala.
+     A Montserrat é geométrica e larga: no 600 que o `font-semibold` normalmente
+     vale, ela pesa demais e a página inteira grita. Baixar aqui alivia os 194
+     `font-semibold` do projeto de uma vez, sem caçar classe por classe — e a
+     hierarquia continua, porque tudo desceu junto. */
+  --font-weight-medium: 400;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+}
+
+/* Tokens semânticos.
+
+   O site inteiro é verde escuro, e não só as faixas de marca: foi o pedido da
+   direção. Por isso existe um tema só — sem alternativa clara — e ele vale
+   independentemente do que o sistema do visitante prefira.
+
+   O `dark:` do Tailwind passa a depender do atributo em <html>, que o layout
+   raiz fixa em "dark". Sem isso, metade das telas cairia no ramo claro e a
+   outra metade no escuro conforme o computador de quem abre, e os dois ramos
+   foram desenhados para fundos opostos. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+:root[data-theme="dark"],
+:root[data-theme="light"] {
+  /* Fundo um tom abaixo do verde da marca, para a superfície se destacar dele */
+  --bg: #0e241e;
+  --surface: var(--color-vp-green);
+  --surface-sunken: #0a1c17;
+  --text: var(--color-vp-cream);
+  /* 5.9:1 sobre a superfície — passa em AA sem competir com o texto principal */
+  --text-muted: #9aada4;
+  --border: #2d5247;
+  --accent: var(--color-vp-gold);
+  --brand: var(--color-vp-gold);
+  /* Creme, e não o verde: é o que aparece sobre as faixas de marca, e um verde
+     aqui sumiria dentro delas. */
+  --on-brand: var(--color-vp-cream);
+
+  --success: #7fb08c;
+  --success-bg: #163026;
+  --warning: #d9b57e;
+  --warning-bg: #2e2617;
+  --danger: #e09182;
+  --danger-bg: #33201c;
+}
+
+/* Expõe os tokens semânticos como utilitários Tailwind (bg-surface, text-muted…) */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+/* O wordmark da marca é serifado — títulos ecoam isso */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+@keyframes vp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-enter {
+  animation: vp-fade-in 0.35s ease;
+}

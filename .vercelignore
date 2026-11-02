@@ -1,0 +1,7 @@
+.claude
+scripts
+node_modules
+.next
+*.db
+*.db-journal
+.env
