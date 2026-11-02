@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { dataCurta, moeda } from "@/lib/format";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { CLINICA } from "@/lib/clinica";
+import { regrasDoClube } from "@/lib/clube";
 import {
   cancelarVoucher,
   emitirVouchersAniversario,
@@ -43,7 +45,7 @@ export default async function VouchersPage({
   const { status } = await searchParams;
   const filtro = status ?? "DISPONIVEL";
 
-  const [pacientes, servicos] = await Promise.all([
+  const [pacientes, servicos, regras] = await Promise.all([
     db.paciente.findMany({
       orderBy: { usuario: { nome: "asc" } },
       select: { id: true, usuario: { select: { nome: true } } },
@@ -53,6 +55,7 @@ export default async function VouchersPage({
       orderBy: { ordem: "asc" },
       select: { id: true, nome: true },
     }),
+    regrasDoClube(),
   ]);
 
   const vouchers = await db.voucher.findMany({
@@ -106,6 +109,7 @@ export default async function VouchersPage({
               nome: p.usuario.nome,
             }))}
             servicos={servicos}
+            faixas={regras.niveis.map((n) => n.nome)}
           />
           <form action={emitirVouchersAniversario}>
             <button
@@ -155,9 +159,23 @@ export default async function VouchersPage({
         <ul className="flex flex-col gap-3">
           {vouchers.map((v) => {
             const vencido = v.status === "DISPONIVEL" && v.validoAte < agora;
+            // O aviso já leva o que o voucher dá e até quando: a pessoa não
+            // precisa abrir o portal para saber se vale a pena marcar
+            const beneficio = [
+              v.valor ? `${moeda(v.valor)} de crédito` : null,
+              v.percentual ? `${v.percentual}% de desconto` : null,
+              v.servico ? `em ${v.servico.nome}` : null,
+            ]
+              .filter(Boolean)
+              .join(" ");
             const zap = linkWhatsapp(
               v.paciente.whatsapp ?? v.paciente.telefone,
-              `Olá, ${v.paciente.usuario.nome.split(" ")[0]}! Aqui é da Vitapraxis, sobre o seu ${v.titulo.toLowerCase()}.`
+              `Olá, ${v.paciente.usuario.nome.split(" ")[0]}! Aqui é da Vitapraxis 🌿\n\n` +
+                `Você ganhou um voucher: *${v.titulo}*` +
+                (beneficio ? ` — ${beneficio}` : "") +
+                `.\nVale até ${dataCurta(v.validoAte)}.\n\n` +
+                `Veja no seu portal: ${CLINICA.site}/app/beneficios\n` +
+                `Quer agendar? É só responder esta mensagem.`
             );
 
             return (

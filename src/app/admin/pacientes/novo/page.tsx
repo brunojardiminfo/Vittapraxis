@@ -19,9 +19,8 @@ export default function NovoPacientePage() {
       <header className="mb-8">
         <h1 className="text-[1.7rem]">Novo Paciente</h1>
         <p className="mt-1 max-w-xl text-sm text-muted">
-          Cria o acesso ao portal e o código de indicação do Clube. O
-          prontuário segue no Clínica Ágil — aqui fica o que a pessoa usa para
-          acompanhar sessões e benefícios.
+          Cria o acesso ao portal e o código de indicação do Clube. Só a
+          clínica cadastra: o site não tem cadastro aberto.
         </p>
       </header>
 

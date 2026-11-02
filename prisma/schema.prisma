@@ -21,13 +21,17 @@ model Usuario {
   email        String    @unique
   senhaHash    String
   nome         String
-  papel        String // PACIENTE | ADMIN
+  papel        String // PACIENTE | PROFISSIONAL | ADMIN
   /// Última vez que a pessoa abriu a plataforma — alimenta a gestão no admin
   ultimoAcesso DateTime?
+  /// Senha provisória definida pela administração: obriga a troca no
+  /// próximo acesso, antes de qualquer outra tela
+  trocarSenha  Boolean   @default(false)
   criadoEm     DateTime  @default(now())
 
-  paciente Paciente?
-  sessoes  Sessao[]
+  paciente     Paciente?
+  profissional Profissional?
+  sessoes      Sessao[]
 }
 
 model Sessao {
@@ -59,6 +63,9 @@ model Paciente {
   consentimentoLgpd Boolean   @default(false)
   /// Separado de telefone: é por aqui que a clínica fala com o paciente
   whatsapp          String?
+  /// Ficha clínica: queixa, objetivo e cuidados — o que o profissional
+  /// precisa saber antes de atender
+  fichaClinica      String?
   cashback          Float     @default(0)
   pontos            Int       @default(0)
   codigoIndicacao   String    @unique
@@ -76,13 +83,16 @@ model Paciente {
   vouchers       Voucher[]
   sorteiosGanhos Sorteio[]
   pedidoVales    PedidoVale[]
+  evolucoes      Evolucao[]
 }
 
-/// Profissional não tem login: quem opera o sistema é a administração. Por
-/// isso o nome vive aqui, e não emprestado de um Usuario.
+/// O nome vive aqui, e não emprestado de um Usuario: nem todo profissional
+/// tem acesso ao portal, e a equipe aparece no site de qualquer forma.
 model Profissional {
   id            String  @id @default(cuid())
   nome          String
+  /// Login do portal do profissional, quando a administração cria um
+  usuarioId     String? @unique
   especialidade String
   bio           String
   iniciais      String
@@ -96,10 +106,12 @@ model Profissional {
   ordem         Int     @default(0)
   ativo         Boolean @default(true)
 
+  usuario      Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   servicos     Servico[]
   agendamentos Agendamento[]
   pacotes      Pacote[]
   pedidos      PedidoAgendamento[]
+  evolucoes    Evolucao[]
 }
 
 // ---------------------------------------------------------------------------
@@ -114,7 +126,13 @@ model Servico {
   beneficios          String // itens separados por "|"
   duracaoMin          Int
   precoAvulso         Float
+  /// Preço de campanha. Nulo = sem promoção
+  precoPromocional    Float?
   precoEmPlano        Float?
+  /// Mostra o valor avulso no portal do paciente
+  exibirPreco         Boolean @default(true)
+  /// Mostra o preço promocional no portal do paciente
+  exibirPromocional   Boolean @default(true)
   ordem               Int     @default(0)
   /// Pontos do Clube por sessão deste serviço. Nulo usa o padrão global de
   /// Configuracao.pontosPorSessao — assim a clínica só preenche onde quer
@@ -149,10 +167,43 @@ model Agendamento {
   servico      Servico          @relation(fields: [servicoId], references: [id], onDelete: Cascade)
   indice       IndiceBemEstar?
   lancamento   LancamentoClube?
+  evolucao     Evolucao?
 
   @@index([pacienteId])
   @@index([profissionalId])
   @@index([inicio])
+}
+
+/// O que o profissional registra depois de atender.
+///
+/// Uma por sessão: amarrada ao agendamento, é o agendamento que diz quando e
+/// com quem foi, e a evolução diz o que foi feito e como a pessoa está.
+model Evolucao {
+  id             String   @id @default(cuid())
+  agendamentoId  String   @unique
+  pacienteId     String
+  profissionalId String
+  /// O que a pessoa relatou ao chegar
+  queixa         String?
+  /// O que foi feito na sessão
+  conduta        String
+  /// Como a pessoa respondeu e como está evoluindo
+  evolucao       String
+  /// Recomendações para casa e para a próxima sessão
+  orientacoes    String?
+  /// Dor relatada, 0..10
+  dor            Int?
+  /// Regiões marcadas no mapa corporal, separadas por "|"
+  regioesDor     String?
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  agendamento  Agendamento  @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+
+  @@index([pacienteId, criadoEm])
+  @@index([profissionalId, criadoEm])
 }
 
 model Pacote {
@@ -279,8 +330,10 @@ model Configuracao {
   pontosPorSessao        Int      @default(100)
   /// Pontos por pacote adquirido
   pontosPorPacote        Int      @default(500)
-  /// Crédito em reais liberado a quem indica, quando a indicada se trata
+  /// Legado: crédito fixo por indicação, substituído pelo percentual
   cashbackPorIndicacao   Float    @default(50)
+  /// Crédito a quem indica, em % do valor da primeira sessão da indicada
+  indicacaoPercentual    Float    @default(10)
   /// Meses de validade de cada crédito, contados da concessão
   validadeCreditoMeses   Int      @default(12)
   /// Quantos vouchers de aniversário cada paciente recebe por ano
@@ -410,6 +463,22 @@ model Destaque {
   criadoEm  DateTime  @default(now())
 
   @@index([ativo, ordem])
+}
+
+/// Texto pronto para a recepção mandar no WhatsApp.
+///
+/// Vive no banco porque quem escreve é a clínica. As chaves entre chaves
+/// ({site}, {pontosPorSessao}, {indicacao}) são trocadas pelos valores atuais
+/// na hora de mostrar, para o texto acompanhar as regras do Clube.
+model MensagemPronta {
+  id           String   @id @default(cuid())
+  titulo       String
+  /// Quando usar
+  para         String?
+  texto        String
+  ordem        Int      @default(0)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 }
 
 model Faq {

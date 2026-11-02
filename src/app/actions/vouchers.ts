@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { usuarioAtual } from "@/lib/auth";
-import { lancarClube, regrasDoClube } from "@/lib/clube";
+import { lancarClube, nivelDe, regrasDoClube } from "@/lib/clube";
 
 /** Primeiro e último instante do mês de uma data. */
 function limitesDoMes(d: Date) {
@@ -29,7 +29,7 @@ export async function emitirVouchersAniversario() {
 
   const hoje = new Date();
   const mes = hoje.getMonth();
-  const { fim } = limitesDoMes(hoje);
+  const { inicio, fim } = limitesDoMes(hoje);
   const regras = await regrasDoClube();
   if (regras.vouchersAniversarioAno <= 0) return;
 
@@ -62,7 +62,9 @@ export async function emitirVouchersAniversario() {
         tipo: "ANIVERSARIO",
         titulo: "Voucher de aniversário",
         descricao:
-          "Desconto nos serviços participantes. Uso pessoal e intransferível, não cumulativo com outras promoções.",
+          "Válido somente durante o mês do seu aniversário. Desconto nos serviços participantes, uso pessoal e intransferível, não cumulativo com outras promoções.",
+        // Vale o mês do aniversário inteiro, e só ele
+        validoDe: inicio,
         validoAte: fim,
       },
     });
@@ -102,6 +104,9 @@ export async function usarVoucher(
   const v = await db.voucher.findUnique({ where: { id: parsed.data.id } });
   if (!v) return { erro: "Voucher não encontrado." };
   if (v.status !== "DISPONIVEL") return { erro: "Esse voucher já foi usado." };
+  if (v.validoDe > new Date()) {
+    return { erro: "Esse voucher ainda não começou a valer." };
+  }
   if (v.validoAte < new Date()) {
     await db.voucher.update({
       where: { id: v.id },
@@ -177,7 +182,8 @@ export async function cancelarVoucher(formData: FormData) {
 
 const ManualSchema = z
   .object({
-    pacienteId: z.string().min(1, "Escolha o paciente."),
+    /// Um paciente, "TODOS" ou "FAIXA:<nome>" para disparar em lote
+    pacienteId: z.string().min(1, "Escolha para quem."),
     titulo: z.string().trim().min(3, "Dê um nome ao voucher."),
     descricao: z.string().trim().max(300).optional(),
     forma: z.enum(["VALOR", "PERCENTUAL"]),
@@ -198,7 +204,7 @@ const ManualSchema = z
     { message: "O desconto vai de 1 a 100%.", path: ["percentual"] }
   );
 
-export type EstadoManual = { ok?: boolean; erro?: string };
+export type EstadoManual = { ok?: boolean; erro?: string; emitidos?: number };
 
 /**
  * Emissão avulsa pelo balcão.
@@ -232,15 +238,38 @@ export async function emitirVoucherManual(
   if (Number.isNaN(vence.getTime())) return { erro: "Data de validade inválida." };
   if (vence < new Date()) return { erro: "Essa validade já passou." };
 
-  const existe = await db.paciente.findUnique({
-    where: { id: d.pacienteId },
-    select: { id: true },
-  });
-  if (!existe) return { erro: "Paciente não encontrado." };
+  // Campanha: o mesmo voucher para a base toda ou para uma faixa do Clube.
+  // Cada paciente recebe o seu, para o resgate e o vencimento serem
+  // individuais — e o aviso sai pelo botão de WhatsApp de cada um.
+  let destinatarios: string[];
+  if (d.pacienteId === "TODOS" || d.pacienteId.startsWith("FAIXA:")) {
+    const pacientes = await db.paciente.findMany({
+      select: { id: true, pontos: true },
+    });
+    if (d.pacienteId === "TODOS") {
+      destinatarios = pacientes.map((p) => p.id);
+    } else {
+      const faixa = d.pacienteId.slice("FAIXA:".length);
+      const regras = await regrasDoClube();
+      destinatarios = pacientes
+        .filter((p) => nivelDe(p.pontos, regras).atual.nome === faixa)
+        .map((p) => p.id);
+    }
+    if (destinatarios.length === 0) {
+      return { erro: "Nenhum paciente nesse grupo." };
+    }
+  } else {
+    const existe = await db.paciente.findUnique({
+      where: { id: d.pacienteId },
+      select: { id: true },
+    });
+    if (!existe) return { erro: "Paciente não encontrado." };
+    destinatarios = [existe.id];
+  }
 
-  await db.voucher.create({
-    data: {
-      pacienteId: d.pacienteId,
+  await db.voucher.createMany({
+    data: destinatarios.map((pacienteId) => ({
+      pacienteId,
       tipo: "CORTESIA",
       titulo: d.titulo,
       descricao: d.descricao
@@ -250,10 +279,10 @@ export async function emitirVoucherManual(
       percentual: d.forma === "PERCENTUAL" ? Number(d.percentual) : null,
       servicoId: d.servicoId || null,
       validoAte: vence,
-    },
+    })),
   });
 
   revalidatePath("/admin/vouchers");
   revalidatePath("/app/beneficios");
-  return { ok: true };
+  return { ok: true, emitidos: destinatarios.length };
 }

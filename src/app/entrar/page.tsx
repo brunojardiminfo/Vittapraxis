@@ -53,21 +53,29 @@ export default async function EntrarPage({
       <section className="flex flex-col justify-center px-6 py-14 sm:px-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-8 lg:hidden">
-            <Logo altura={36} />
+            <Logo altura={36} emFundoEscuro />
           </div>
 
-          <h1 className="text-[1.7rem]">Entrar no Clube</h1>
+          <h1 className="text-[1.7rem]">Entrar</h1>
           <p className="mt-2 text-sm text-muted">
-            Acesse seu acompanhamento, agendamentos e benefícios.
+            Pacientes, profissionais e administração entram com o e-mail e a
+            senha cadastrados pela clínica.
           </p>
 
           <FormularioLogin proximo={proximo} />
 
-          <p className="mt-8 text-center text-sm text-muted">
-            <Link href="/" className="font-semibold text-accent hover:underline">
-              ← Voltar ao site
-            </Link>
+          <p className="mt-5 text-center text-[0.8rem] text-muted">
+            Ainda não tem acesso ou esqueceu a senha? Fale com a recepção.
           </p>
+
+          {/* Botão de verdade, e não link de rodapé: quem caiu aqui por
+              engano precisa achar a saída sem procurar */}
+          <Link
+            href="/"
+            className="mt-8 flex w-full items-center justify-center gap-2 rounded-full border-2 border-accent px-7 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-[var(--on-brand)] dark:hover:text-vp-green-deep"
+          >
+            <span aria-hidden>←</span> Voltar ao site
+          </Link>
         </div>
       </section>
     </main>

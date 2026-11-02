@@ -12,21 +12,23 @@ const dinheiro = z
   .transform((v) => v.replace(/\./g, "").replace(",", "."))
   .pipe(z.coerce.number().min(0, "Valor não pode ser negativo."));
 
+/** Dinheiro opcional: vazio vira nulo, e não zero. */
+const dinheiroOpcional = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v ? v.replace(/\./g, "").replace(",", ".") : null))
+  .pipe(z.coerce.number().min(0).nullable());
+
+// A duração saiu da tela a pedido da direção; o valor gravado continua
+// alimentando o "adicionar à agenda" do paciente.
 const ServicoSchema = z.object({
   id: z.string().min(1),
-  duracaoMin: z.coerce
-    .number()
-    .int()
-    .min(5, "Duração mínima de 5 minutos.")
-    .max(480, "Duração máxima de 8 horas."),
+  /// Vazio significa "sem promoção"
+  precoPromocional: dinheiroOpcional,
   precoAvulso: dinheiro,
   /// Vazio significa "não vendemos em pacote", não zero
-  precoEmPlano: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v ? v.replace(/\./g, "").replace(",", ".") : null))
-    .pipe(z.coerce.number().min(0).nullable()),
+  precoEmPlano: dinheiroOpcional,
   /// Vazio significa "usa o padrão global do Clube"
   pontos: z
     .string()
@@ -35,6 +37,8 @@ const ServicoSchema = z.object({
     .transform((v) => (v ? v : null))
     .pipe(z.coerce.number().int().min(0).nullable()),
   ativo: z.boolean(),
+  exibirPreco: z.boolean(),
+  exibirPromocional: z.boolean(),
 });
 
 export type EstadoServico = { ok?: boolean; erro?: string };
@@ -53,20 +57,27 @@ export async function salvarServico(
 
   const parsed = ServicoSchema.safeParse({
     id: formData.get("id"),
-    duracaoMin: formData.get("duracaoMin"),
+    precoPromocional: formData.get("precoPromocional") ?? undefined,
     precoAvulso: formData.get("precoAvulso"),
     precoEmPlano: formData.get("precoEmPlano") ?? undefined,
     pontos: formData.get("pontos") ?? undefined,
     ativo: formData.get("ativo") === "on",
+    exibirPreco: formData.get("exibirPreco") === "on",
+    exibirPromocional: formData.get("exibirPromocional") === "on",
   });
 
   if (!parsed.success) return { erro: parsed.error.issues[0].message };
 
-  const { id, duracaoMin, precoAvulso, precoEmPlano, pontos, ativo } =
-    parsed.data;
+  const { id, ...dados } = parsed.data;
 
-  if (precoEmPlano !== null && precoEmPlano > precoAvulso) {
+  if (dados.precoEmPlano !== null && dados.precoEmPlano > dados.precoAvulso) {
     return { erro: "O preço em pacote não pode ser maior que o avulso." };
+  }
+  if (
+    dados.precoPromocional !== null &&
+    dados.precoPromocional >= dados.precoAvulso
+  ) {
+    return { erro: "O promocional precisa ser menor que a sessão avulsa." };
   }
 
   const servico = await db.servico.findUnique({ where: { id } });
@@ -74,7 +85,7 @@ export async function salvarServico(
 
   await db.servico.update({
     where: { id },
-    data: { duracaoMin, precoAvulso, precoEmPlano, pontos, ativo },
+    data: dados,
   });
 
   // Site público

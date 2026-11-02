@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-// Valores e duração saíram do portal a pedido da clínica
+import { moeda } from "@/lib/format";
 import { BotaoLink } from "@/components/ui";
 import { IconeCheck } from "@/components/icones";
 
@@ -20,7 +20,7 @@ export default async function ServicosPage() {
       <header className="mb-7">
         <h1 className="text-[1.9rem]">Catálogo de Serviços</h1>
         <p className="mt-1 text-sm text-muted">
-          Benefícios, duração e profissionais de cada especialidade
+          Benefícios e profissionais de cada especialidade
         </p>
       </header>
 
@@ -31,6 +31,8 @@ export default async function ServicosPage() {
             className="flex flex-col rounded-2xl border border-line bg-surface p-6"
           >
             <h2 className="mb-3 text-[1.15rem]">{s.nome}</h2>
+
+            <Preco servico={s} />
 
             <p className="mb-4 text-[0.9rem] leading-relaxed text-muted">
               {s.descricao}
@@ -61,5 +63,54 @@ export default async function ServicosPage() {
         ))}
       </div>
     </>
+  );
+}
+
+/**
+ * Valor no portal, só quando a clínica liga a exibição no admin.
+ *
+ * O promocional aparece com o avulso riscado ao lado — se o avulso estiver
+ * escondido, o promocional aparece sozinho, sem a comparação.
+ */
+function Preco({
+  servico,
+}: {
+  servico: {
+    precoAvulso: number;
+    precoPromocional: number | null;
+    exibirPreco: boolean;
+    exibirPromocional: boolean;
+  };
+}) {
+  const promo =
+    servico.exibirPromocional && servico.precoPromocional !== null
+      ? servico.precoPromocional
+      : null;
+
+  if (promo === null && !servico.exibirPreco) return null;
+
+  return (
+    <p className="-mt-1 mb-4 flex flex-wrap items-baseline gap-2.5">
+      {promo !== null ? (
+        <>
+          <span className="rounded-full bg-success-bg px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wider text-success">
+            Promoção
+          </span>
+          <span className="font-serif text-[1.35rem] text-brand">
+            {moeda(promo)}
+          </span>
+          {servico.exibirPreco ? (
+            <span className="text-[0.86rem] text-muted line-through">
+              {moeda(servico.precoAvulso)}
+            </span>
+          ) : null}
+        </>
+      ) : (
+        <span className="font-serif text-[1.35rem] text-brand">
+          {moeda(servico.precoAvulso)}
+        </span>
+      )}
+      <span className="text-[0.78rem] text-muted">por sessão</span>
+    </p>
   );
 }

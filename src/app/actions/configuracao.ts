@@ -13,7 +13,16 @@ const ConfigSchema = z.object({
     .min(0)
     .max(100000),
   pontosPorPacote: z.coerce.number().int().min(0).max(100000),
-  cashbackPorIndicacao: z.coerce.number().min(0).max(10000),
+  indicacaoPercentual: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(",", "."))
+    .pipe(
+      z.coerce
+        .number()
+        .min(0, "O percentual não pode ser negativo.")
+        .max(100, "O percentual vai até 100%.")
+    ),
   validadeCreditoMeses: z.coerce
     .number()
     .int()
@@ -45,7 +54,7 @@ export async function salvarConfiguracao(
     pontosCadastro: formData.get("pontosCadastro"),
     pontosPorSessao: formData.get("pontosPorSessao"),
     pontosPorPacote: formData.get("pontosPorPacote"),
-    cashbackPorIndicacao: formData.get("cashbackPorIndicacao"),
+    indicacaoPercentual: formData.get("indicacaoPercentual"),
     validadeCreditoMeses: formData.get("validadeCreditoMeses"),
     vouchersAniversarioAno: formData.get("vouchersAniversarioAno"),
   });

@@ -16,6 +16,9 @@ import { Card, CardHead, Pill, Progress, SectionTitle, Vazio } from "@/component
 import { IconeChat, IconePresente } from "@/components/icones";
 import { AjusteClube } from "../ajuste";
 import { FormularioCadastro } from "./cadastro";
+import { NovaSenhaPaciente } from "./senha";
+import { FichaClinica } from "@/app/pro/pacientes/[id]/ficha";
+import { lerRegioes, rotulosDe } from "@/lib/mapa-corporal";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +79,13 @@ export default async function FichaPacientePage({
     where: { id },
     include: {
       usuario: {
-        select: { nome: true, email: true, ultimoAcesso: true, criadoEm: true },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          ultimoAcesso: true,
+          criadoEm: true,
+        },
       },
       agendamentos: {
         orderBy: { inicio: "desc" },
@@ -95,6 +104,14 @@ export default async function FichaPacientePage({
         include: { servico: { select: { nome: true } } },
       },
       indicadaPor: { include: { paciente: { include: { usuario: true } } } },
+      evolucoes: {
+        orderBy: { criadoEm: "desc" },
+        take: 10,
+        include: {
+          profissional: { select: { nome: true } },
+          agendamento: { include: { servico: { select: { nome: true } } } },
+        },
+      },
     },
   });
 
@@ -176,6 +193,8 @@ export default async function FichaPacientePage({
           </p>
         </div>
 
+        <div className="flex flex-wrap items-start gap-2.5">
+        <NovaSenhaPaciente usuarioId={paciente.usuario.id} />
         {zap ? (
           <a
             href={zap}
@@ -187,6 +206,7 @@ export default async function FichaPacientePage({
             WhatsApp
           </a>
         ) : null}
+        </div>
       </header>
 
       {/* ---------------- INDICADORES ---------------- */}
@@ -248,6 +268,50 @@ export default async function FichaPacientePage({
             email={paciente.usuario.email}
             codigo={paciente.codigoIndicacao}
           />
+
+          <Card className="p-6">
+            <CardHead titulo="Ficha clínica" />
+            <FichaClinica
+              pacienteId={paciente.id}
+              texto={paciente.fichaClinica ?? ""}
+            />
+          </Card>
+
+          <Card className="p-6">
+            <CardHead
+              titulo="Evoluções dos profissionais"
+              acao={
+                <span className="text-[0.78rem] text-muted">últimas 10</span>
+              }
+            />
+            {paciente.evolucoes.length === 0 ? (
+              <Vazio>Nenhuma evolução registrada no Portal do Profissional.</Vazio>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {paciente.evolucoes.map((e) => (
+                  <li key={e.id} className="rounded-xl bg-sunken px-4 py-3">
+                    <p className="text-[0.86rem] font-semibold">
+                      {dataCurta(e.agendamento.inicio)} ·{" "}
+                      {e.agendamento.servico.nome}
+                      <span className="font-normal text-muted">
+                        {" "}
+                        · {e.profissional.nome}
+                      </span>
+                    </p>
+                    <p className="mt-1 whitespace-pre-line text-[0.84rem] leading-relaxed">
+                      {e.evolucao}
+                    </p>
+                    {e.dor !== null || e.regioesDor ? (
+                      <p className="mt-1 text-[0.78rem] text-muted">
+                        {e.dor !== null ? `Dor ${e.dor}/10 · ` : ""}
+                        {rotulosDe(lerRegioes(e.regioesDor)).join(", ")}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
 
           <Card className="p-6">
             <CardHead titulo="Próximas sessões" />

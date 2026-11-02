@@ -8,15 +8,16 @@ export { SESSION_COOKIE };
 const SESSION_DIAS = 30;
 
 /**
- * Só dois papéis. O agendamento e o prontuário vivem no Clínica Ágil, que a
- * clínica já usa — painéis separados de profissional e recepção aqui só
- * criariam cadastro em dois lugares.
+ * Três papéis. Ninguém se cadastra sozinho: a administração cria o acesso de
+ * pacientes e profissionais, e o profissional enxerga só o portal clínico —
+ * nada de financeiro nem de regras do Clube.
  */
-export type Papel = "PACIENTE" | "ADMIN";
+export type Papel = "PACIENTE" | "PROFISSIONAL" | "ADMIN";
 
 /** Rota inicial de cada papel — usada no login e nos redirecionamentos. */
 export const HOME_POR_PAPEL: Record<Papel, string> = {
   PACIENTE: "/app",
+  PROFISSIONAL: "/pro",
   ADMIN: "/admin",
 };
 
@@ -27,6 +28,10 @@ export type UsuarioSessao = {
   papel: Papel;
   /** Id do registro Paciente — só existe quando papel é PACIENTE. */
   perfilId: string | null;
+  /** Id do registro Profissional — só existe quando papel é PROFISSIONAL. */
+  profissionalId: string | null;
+  /** Senha provisória ainda não trocada */
+  trocarSenha: boolean;
 };
 
 export async function verificarSenha(senha: string, hash: string) {
@@ -72,7 +77,12 @@ export async function usuarioAtual(): Promise<UsuarioSessao | null> {
   const sessao = await db.sessao.findUnique({
     where: { token },
     include: {
-      usuario: { include: { paciente: true } },
+      usuario: {
+        include: {
+          paciente: { select: { id: true } },
+          profissional: { select: { id: true } },
+        },
+      },
     },
   });
 
@@ -103,7 +113,23 @@ export async function usuarioAtual(): Promise<UsuarioSessao | null> {
     email: u.email,
     papel: u.papel as Papel,
     perfilId: u.paciente?.id ?? null,
+    profissionalId: u.profissional?.id ?? null,
+    trocarSenha: u.trocarSenha,
   };
+}
+
+/**
+ * Senha provisória que a administração entrega pelo WhatsApp.
+ *
+ * Sem caracteres que se confundem ao ditar ou ler no celular (0/O, 1/l/I),
+ * e a pessoa troca no primeiro acesso de qualquer forma.
+ */
+export function senhaProvisoria() {
+  const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(10);
+  let s = "";
+  for (const b of bytes) s += letras[b % letras.length];
+  return `${s.slice(0, 5)}-${s.slice(5)}`;
 }
 
 /** Igual a usuarioAtual, mas lança se o papel não bater — para uso em páginas. */

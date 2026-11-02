@@ -45,7 +45,10 @@ export const CLINICA = {
   },
 
   horario: {
-    resumo: "Segunda a sábado, das 7h40 às 20h",
-    curto: "Seg a Sáb, 7h40–20h",
+    resumo: "Segunda a sexta, das 7h40 às 20h, e sábado, das 8h às 14h",
+    curto: "Seg a Sex 7h40–20h · Sáb 8h–14h",
   },
+
+  /// Endereço público do portal, usado nos links das mensagens de WhatsApp
+  site: "https://vita-praxis.vercel.app",
 } as const;

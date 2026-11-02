@@ -43,9 +43,12 @@ function Emitir() {
 export function EmitirVoucher({
   pacientes,
   servicos,
+  faixas,
 }: {
   pacientes: Opcao[];
   servicos: Opcao[];
+  /** Faixas do Clube, para disparar uma campanha só para elas */
+  faixas: string[];
 }) {
   const [estado, formAction] = useActionState<EstadoManual, FormData>(
     emitirVoucherManual,
@@ -79,7 +82,7 @@ export function EmitirVoucher({
         onClick={() => setAberto(true)}
         className="rounded-full border border-line px-5 py-2.5 text-[0.84rem] font-semibold transition-colors hover:border-accent hover:text-accent"
       >
-        Emitir voucher avulso
+        Emitir voucher
       </button>
     );
   }
@@ -91,9 +94,10 @@ export function EmitirVoucher({
     >
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-[1.15rem]">Emitir voucher avulso</h2>
+          <h2 className="text-[1.15rem]">Emitir voucher</h2>
           <p className="mt-1 text-[0.84rem] text-muted">
-            Para o que o paciente pede no balcão ou pelo WhatsApp.
+            Para um paciente ou como campanha para a base toda ou uma faixa
+            do Clube. Depois, avise cada um pelo botão de WhatsApp da lista.
           </p>
         </div>
         <button
@@ -108,7 +112,7 @@ export function EmitirVoucher({
       <div className="grid gap-3.5 sm:grid-cols-2">
         <div>
           <label htmlFor="pacienteId" className={ROTULO}>
-            Paciente
+            Para quem
           </label>
           <select
             id="pacienteId"
@@ -118,11 +122,23 @@ export function EmitirVoucher({
             className={CAMPO}
           >
             <option value="">Escolha…</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
+            <optgroup label="Campanha">
+              <option value="TODOS">
+                Todos os pacientes ({pacientes.length})
               </option>
-            ))}
+              {faixas.map((f) => (
+                <option key={f} value={`FAIXA:${f}`}>
+                  Faixa {f}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Paciente">
+              {pacientes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </div>
 
@@ -259,7 +275,9 @@ export function EmitirVoucher({
           role="status"
           className="mt-3.5 rounded-lg bg-success-bg px-3.5 py-2 text-[0.82rem] font-medium text-success"
         >
-          Voucher emitido. Já aparece no portal do paciente.
+          {estado.emitidos && estado.emitidos > 1
+            ? `${estado.emitidos} vouchers emitidos. Já aparecem no portal de cada paciente.`
+            : "Voucher emitido. Já aparece no portal do paciente."}
         </p>
       ) : null}
 

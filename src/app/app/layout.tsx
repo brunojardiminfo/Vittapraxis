@@ -22,6 +22,7 @@ export default async function AppLayout({
   // O middleware só checa a presença do cookie; a validação real é aqui.
   if (!u) redirect("/entrar?proximo=/app");
   if (u.papel !== "PACIENTE") redirect(HOME_POR_PAPEL[u.papel]);
+  if (u.trocarSenha) redirect("/trocar-senha");
 
   return (
     <div className="lg:grid lg:grid-cols-[272px_1fr]">

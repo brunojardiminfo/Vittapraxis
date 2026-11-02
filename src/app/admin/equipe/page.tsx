@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { haQuantoTempo } from "@/lib/format";
 import { FormularioProfissional } from "./formulario";
 import { ListaEquipe, type ItemEquipe } from "./lista";
 
@@ -29,6 +30,7 @@ export default async function AdminEquipePage() {
       orderBy: [{ ativo: "desc" }, { ordem: "asc" }, { nome: "asc" }],
       include: {
         servicos: { select: { id: true, nome: true } },
+        usuario: { select: { id: true, email: true, ultimoAcesso: true } },
         _count: { select: { agendamentos: true } },
       },
     }),
@@ -52,6 +54,13 @@ export default async function AdminEquipePage() {
     servicos: p.servicos.map((s) => s.id),
     nomesServicos: p.servicos.map((s) => s.nome),
     sessoes: p._count.agendamentos,
+    acesso: p.usuario
+      ? {
+          id: p.usuario.id,
+          email: p.usuario.email,
+          ultimoAcesso: haQuantoTempo(p.usuario.ultimoAcesso),
+        }
+      : null,
   }));
 
   const semServico = itens.filter(
@@ -73,7 +82,8 @@ export default async function AdminEquipePage() {
         <h1 className="text-[1.7rem]">Equipe</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Quem atende, em que especialidade e quais serviços. É daqui que sai a
-          lista de profissionais que o paciente vê ao escolher um serviço.
+          lista de profissionais que o paciente vê ao escolher um serviço — e
+          é aqui que se cria o login de cada um no Portal do Profissional.
         </p>
       </header>
 

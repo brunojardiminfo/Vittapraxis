@@ -20,7 +20,8 @@ export type RegrasClube = {
   pontosCadastro: number;
   pontosPorSessao: number;
   pontosPorPacote: number;
-  cashbackPorIndicacao: number;
+  /** % do valor da primeira sessão da pessoa indicada */
+  indicacaoPercentual: number;
   validadeCreditoMeses: number;
   vouchersAniversarioAno: number;
   niveis: NivelRegra[];
@@ -31,7 +32,7 @@ const PADRAO: RegrasClube = {
   pontosCadastro: 500,
   pontosPorSessao: 100,
   pontosPorPacote: 500,
-  cashbackPorIndicacao: 50,
+  indicacaoPercentual: 10,
   validadeCreditoMeses: 12,
   vouchersAniversarioAno: 1,
   niveis: [
@@ -42,14 +43,14 @@ const PADRAO: RegrasClube = {
         "Acesso ao Clube, campanhas promocionais mensais e voucher de indicação",
     },
     {
-      nome: "Platina",
+      nome: "Ouro",
       minimo: 1000,
       beneficio: "Tudo do Prata mais participação nos sorteios mensais",
     },
     {
-      nome: "Ouro",
+      nome: "Diamante",
       minimo: 2000,
-      beneficio: "Tudo do Platina mais o voucher especial de aniversário",
+      beneficio: "Tudo do Ouro mais o voucher especial de aniversário",
     },
   ],
 };
@@ -66,7 +67,7 @@ export async function regrasDoClube(): Promise<RegrasClube> {
     pontosCadastro: cfg.pontosCadastro,
     pontosPorSessao: cfg.pontosPorSessao,
     pontosPorPacote: cfg.pontosPorPacote,
-    cashbackPorIndicacao: cfg.cashbackPorIndicacao,
+    indicacaoPercentual: cfg.indicacaoPercentual,
     validadeCreditoMeses: cfg.validadeCreditoMeses,
     vouchersAniversarioAno: cfg.vouchersAniversarioAno,
     // Sem faixa cadastrada o Clube não teria onde encaixar ninguém
@@ -78,6 +79,16 @@ export async function regrasDoClube(): Promise<RegrasClube> {
         }))
       : PADRAO.niveis,
   };
+}
+
+/** Crédito de quem indica: fatia do preço da sessão, arredondada ao centavo. */
+export function valorIndicacao(precoSessao: number, regras: RegrasClube) {
+  return Math.round(precoSessao * regras.indicacaoPercentual) / 100;
+}
+
+/** "10% do valor da primeira sessão" — o texto que site e portal mostram. */
+export function textoIndicacao(regras: RegrasClube) {
+  return `${regras.indicacaoPercentual.toLocaleString("pt-BR")}% do valor da primeira sessão`;
 }
 
 /** Pontos que uma sessão desse serviço vale — o próprio serviço pode fugir do padrão global. */
@@ -155,7 +166,7 @@ export function comoFunciona(regras: RegrasClube) {
     },
     {
       titulo: "Indicação vira dinheiro",
-      texto: `Quando alguém que você indicou faz a primeira sessão, você ganha R$ ${regras.cashbackPorIndicacao.toLocaleString("pt-BR")} de cashback.`,
+      texto: `Quando alguém que você indicou faz a primeira sessão, você ganha ${textoIndicacao(regras)} dela em cashback.`,
     },
     {
       titulo: "Cashback abate a sessão",

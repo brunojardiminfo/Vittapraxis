@@ -99,12 +99,16 @@ export function CabecalhoAdmin({
         <div className="flex shrink-0 items-center gap-3">
           <span className="hidden xl:inline-flex">{voltarAoSite}</span>
 
-          <span className="hidden text-right sm:block">
+          <Link
+            href="/trocar-senha"
+            title="Trocar senha"
+            className="hidden text-right sm:block"
+          >
             <span className="block text-[0.86rem] font-semibold">{nome}</span>
             <span className="block text-[0.72rem] text-vp-gold">
               Acesso total
             </span>
-          </span>
+          </Link>
 
           <Avatar iniciais={iniciais} tamanho={36} dourado />
 
@@ -175,6 +179,13 @@ export function CabecalhoAdmin({
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[color-mix(in_srgb,var(--on-brand)_18%,transparent)] pt-5 dark:border-line">
             {voltarAoSite}
+
+            <Link
+              href="/trocar-senha"
+              className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--on-brand)_40%,transparent)] px-4 py-2 text-[0.8rem] font-semibold transition-colors hover:bg-[color-mix(in_srgb,var(--on-brand)_14%,transparent)] dark:border-line"
+            >
+              Trocar senha
+            </Link>
 
             <form action={sair} className="sm:hidden">
               <button

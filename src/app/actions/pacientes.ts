@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { gerarHash, usuarioAtual } from "@/lib/auth";
+import { gerarHash, senhaProvisoria, usuarioAtual } from "@/lib/auth";
+import { mensagemAcesso } from "@/lib/acesso";
+import { linkWhatsapp } from "@/lib/whatsapp";
 
 const telefone = z
   .string()
@@ -20,7 +22,6 @@ const NovoPacienteSchema = z.object({
   whatsapp: telefone,
   dataNascimento: z.string().trim().optional(),
   endereco: z.string().trim().max(200).optional(),
-  senha: z.string().min(6, "A senha inicial precisa de ao menos 6 caracteres."),
   /// Código de quem indicou, se a pessoa chegou por convite do Clube
   indicadoPor: z.string().trim().max(40).optional(),
 });
@@ -28,7 +29,14 @@ const NovoPacienteSchema = z.object({
 export type EstadoNovoPaciente = {
   ok?: boolean;
   erro?: string;
-  criado?: { nome: string; email: string; codigo: string };
+  criado?: {
+    nome: string;
+    email: string;
+    codigo: string;
+    senha: string;
+    mensagem: string;
+    whatsapp: string | null;
+  };
 };
 
 /**
@@ -76,7 +84,6 @@ export async function criarPaciente(
     whatsapp: formData.get("whatsapp") ?? "",
     dataNascimento: formData.get("dataNascimento") || undefined,
     endereco: formData.get("endereco") || undefined,
-    senha: formData.get("senha"),
     indicadoPor: formData.get("indicadoPor") || undefined,
   });
 
@@ -113,6 +120,9 @@ export async function criarPaciente(
   }
 
   const nascimento = d.dataNascimento ? new Date(d.dataNascimento) : null;
+  // A clínica não escolhe a senha de ninguém: sai uma provisória, e a pessoa
+  // cria a dela no primeiro acesso
+  const senha = senhaProvisoria();
 
   const paciente = await db.$transaction(async (tx) => {
     const usuario = await tx.usuario.create({
@@ -120,7 +130,8 @@ export async function criarPaciente(
         email,
         nome: d.nome,
         papel: "PACIENTE",
-        senhaHash: await gerarHash(d.senha),
+        senhaHash: await gerarHash(senha),
+        trocarSenha: true,
       },
     });
 
@@ -153,9 +164,18 @@ export async function criarPaciente(
   revalidatePath("/admin/pacientes");
   revalidatePath("/admin");
 
+  const mensagem = mensagemAcesso({ nome: d.nome, email, senha, papel: "PACIENTE" });
+
   return {
     ok: true,
-    criado: { nome: d.nome, email, codigo: paciente.codigoIndicacao },
+    criado: {
+      nome: d.nome,
+      email,
+      codigo: paciente.codigoIndicacao,
+      senha,
+      mensagem,
+      whatsapp: linkWhatsapp(d.whatsapp || d.telefone, mensagem),
+    },
   };
 }
 

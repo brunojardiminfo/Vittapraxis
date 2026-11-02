@@ -17,11 +17,13 @@ export default async function AdminServicosPage() {
     id: s.id,
     nome: s.nome,
     categoria: s.categoria,
-    duracaoMin: s.duracaoMin,
+    precoPromocional: s.precoPromocional,
     precoAvulso: s.precoAvulso,
     precoEmPlano: s.precoEmPlano,
     pontos: s.pontos,
     ativo: s.ativo,
+    exibirPreco: s.exibirPreco,
+    exibirPromocional: s.exibirPromocional,
   }));
 
   return (
@@ -38,7 +40,7 @@ export default async function AdminServicosPage() {
       <header className="mb-7">
         <h1 className="text-[1.7rem]">Serviços</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Duração, valores e pontos do Clube. O que você salvar aqui vale para
+          Valores e pontos do Clube. O que você salvar aqui vale para
           o site, a página de especialidades e o portal do paciente ao mesmo
           tempo — os três leem daqui.
         </p>
@@ -46,8 +48,8 @@ export default async function AdminServicosPage() {
 
       <p className="mb-6 rounded-2xl bg-sunken px-5 py-4 text-[0.84rem] leading-relaxed text-muted">
         Os valores não aparecem no site público — lá a pessoa é convidada a
-        falar com a recepção. Eles são usados no portal do paciente, no
-        cálculo de receita e na carteira de pacotes.
+        falar com a recepção. No portal do paciente, cada serviço mostra o
+        valor e o promocional só se as caixas abaixo estiverem marcadas.
       </p>
 
       {opcoes.length === 0 ? (

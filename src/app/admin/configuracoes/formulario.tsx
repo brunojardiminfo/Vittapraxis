@@ -11,7 +11,7 @@ export type Regras = {
   pontosCadastro: number;
   pontosPorSessao: number;
   pontosPorPacote: number;
-  cashbackPorIndicacao: number;
+  indicacaoPercentual: number;
   validadeCreditoMeses: number;
   vouchersAniversarioAno: number;
 };
@@ -45,7 +45,7 @@ export function FormularioConfiguracao({ regras }: { regras: Regras }) {
   const [sessao, setSessao] = useState(String(regras.pontosPorSessao));
   const [pacote, setPacote] = useState(String(regras.pontosPorPacote));
   const [credito, setCredito] = useState(
-    String(regras.cashbackPorIndicacao).replace(".", ",")
+    String(regras.indicacaoPercentual).replace(".", ",")
   );
   const [validade, setValidade] = useState(
     String(regras.validadeCreditoMeses)
@@ -120,22 +120,30 @@ export function FormularioConfiguracao({ regras }: { regras: Regras }) {
 
       <h2 className="mb-1.5 mt-9 text-[1.15rem]">Indicação e vouchers</h2>
       <p className="mb-6 text-[0.84rem] text-muted">
-        O crédito sai quando a pessoa indicada conclui a primeira sessão.
+        O crédito sai quando a pessoa indicada conclui a primeira sessão, como
+        uma porcentagem do valor dela.
       </p>
 
       <div className="grid gap-5 sm:grid-cols-3">
         <div>
-          <label htmlFor="cashbackPorIndicacao" className={ROTULO}>
-            Crédito por indicação (R$)
+          <label htmlFor="indicacaoPercentual" className={ROTULO}>
+            Crédito por indicação (%)
           </label>
           <input
-            id="cashbackPorIndicacao"
-            name="cashbackPorIndicacao"
+            id="indicacaoPercentual"
+            name="indicacaoPercentual"
             inputMode="decimal"
             value={credito}
             onChange={(e) => setCredito(e.target.value)}
             className={CAMPO}
           />
+          <p className="mt-1.5 text-[0.76rem] text-muted">
+            Sessão de R$ 490 →{" "}
+            {(
+              (490 * (Number(credito.replace(",", ".")) || 0)) /
+              100
+            ).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
         </div>
 
         <div>
@@ -168,6 +176,9 @@ export function FormularioConfiguracao({ regras }: { regras: Regras }) {
             onChange={(e) => setVouchers(e.target.value)}
             className={CAMPO}
           />
+          <p className="mt-1.5 text-[0.76rem] text-muted">
+            Válido só durante o mês do aniversário
+          </p>
         </div>
       </div>
 

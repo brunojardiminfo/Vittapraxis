@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pacienteDaSessao } from "@/lib/paciente";
 import { dataCurta } from "@/lib/format";
 import { CLINICA } from "@/lib/clinica";
@@ -32,11 +33,20 @@ export default async function PerfilPage() {
 
   return (
     <>
-      <header className="mb-7">
-        <h1 className="text-[1.9rem]">Meu Perfil</h1>
-        <p className="mt-1 text-sm text-muted">
-          Mantenha seus dados de contato atualizados
-        </p>
+      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[1.9rem]">Meu Perfil</h1>
+          <p className="mt-1 text-sm text-muted">
+            Mantenha seus dados de contato atualizados
+          </p>
+        </div>
+        <Link
+          href="/trocar-senha"
+          className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-[0.84rem] font-semibold transition-colors hover:border-accent hover:text-accent"
+        >
+          <IconeCadeado className="h-4 w-4" />
+          Trocar senha
+        </Link>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">

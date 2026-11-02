@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CLINICA } from "@/lib/clinica";
-import { comoFunciona, regrasDoClube } from "@/lib/clube";
-import { moeda } from "@/lib/format";
+import { comoFunciona, regrasDoClube, textoIndicacao } from "@/lib/clube";
 import { BotaoLink, Eyebrow } from "@/components/ui";
 import { IconeCheck, IconeEstrela } from "@/components/icones";
 
@@ -114,8 +113,8 @@ export default async function ClubePage({
                   "a cada sessão realizada",
                 ],
                 [
-                  moeda(regras.cashbackPorIndicacao),
-                  "por indicação que vira paciente",
+                  `${regras.indicacaoPercentual.toLocaleString("pt-BR")}%`,
+                  "da primeira sessão de quem você indicar, em cashback",
                 ],
                 [
                   `${Math.ceil(ouro.minimo / regras.pontosPorSessao)} sessões`,
@@ -220,7 +219,7 @@ export default async function ClubePage({
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
           <Eyebrow centro>Indique quem você gosta</Eyebrow>
           <h2 className="text-[clamp(1.7rem,3vw,2.3rem)]">
-            {moeda(regras.cashbackPorIndicacao)} de cashback por indicação
+            {regras.indicacaoPercentual.toLocaleString("pt-BR")}% de cashback por indicação
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted">
             Cada paciente tem um código próprio. O cashback cai na sua conta
@@ -234,7 +233,7 @@ export default async function ClubePage({
               ["A pessoa se trata", "Informa o código e faz a primeira sessão"],
               [
                 "O dinheiro entra",
-                `${moeda(regras.cashbackPorIndicacao)} de desconto nas suas sessões`,
+                `${textoIndicacao(regras)} dela vira desconto nas suas`,
               ],
             ].map(([titulo, texto]) => (
               <div key={titulo} className="bg-surface px-6 py-7">

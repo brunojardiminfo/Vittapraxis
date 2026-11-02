@@ -4,7 +4,7 @@ import { SESSION_COOKIE } from "@/lib/session-cookie";
 /**
  * O middleware roda no Edge, onde o Prisma não funciona — então aqui só
  * checamos a presença do cookie. A validação real da sessão e do papel
- * acontece nos layouts de /app e /admin, que rodam em Node.
+ * acontece nos layouts de /app, /pro e /admin, que rodam em Node.
  */
 export function middleware(req: NextRequest) {
   const temSessao = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
@@ -21,5 +21,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/admin/:path*"],
+  matcher: ["/app/:path*", "/admin/:path*", "/pro/:path*", "/trocar-senha"],
 };

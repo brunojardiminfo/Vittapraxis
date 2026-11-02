@@ -8,6 +8,7 @@ import {
   type EstadoNovoPaciente,
 } from "@/app/actions/pacientes";
 import { IconeCheck } from "@/components/icones";
+import { EntregaAcesso } from "@/components/entrega-acesso";
 
 const CAMPO =
   "w-full rounded-xl border border-line bg-sunken px-4 py-3 text-[0.9rem] outline-none focus:border-accent";
@@ -41,7 +42,6 @@ export function FormularioNovoPaciente() {
   const [whatsapp, setWhatsapp] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [endereco, setEndereco] = useState("");
-  const [senha, setSenha] = useState("");
   const [indicadoPor, setIndicadoPor] = useState("");
 
   if (estado.ok && estado.criado) {
@@ -51,21 +51,23 @@ export function FormularioNovoPaciente() {
           <IconeCheck className="h-6 w-6 text-success" />
         </span>
         <h2 className="mb-2 text-[1.4rem]">Paciente cadastrado</h2>
-        <p className="text-[0.92rem] text-muted">
-          {estado.criado.nome} já pode entrar no portal com{" "}
-          <strong className="font-semibold text-ink">
-            {estado.criado.email}
-          </strong>{" "}
-          e a senha que você definiu.
+        <p className="mb-5 text-[0.92rem] text-muted">
+          Envie o acesso para {estado.criado.nome.split(" ")[0]} entrar no
+          portal.
         </p>
+        <div className="mx-auto max-w-lg">
+          <EntregaAcesso
+            email={estado.criado.email}
+            senha={estado.criado.senha}
+            mensagem={estado.criado.mensagem}
+            whatsapp={estado.criado.whatsapp}
+          />
+        </div>
         <p className="mt-4 inline-block rounded-xl bg-sunken px-5 py-3 text-[0.88rem]">
           Código de indicação:{" "}
           <strong className="font-semibold tracking-wider text-accent">
             {estado.criado.codigo}
           </strong>
-        </p>
-        <p className="mx-auto mt-4 max-w-md text-[0.82rem] leading-relaxed text-muted">
-          Peça para trocar a senha no primeiro acesso, em Meu Perfil.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link
@@ -105,7 +107,7 @@ export function FormularioNovoPaciente() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label htmlFor="email" className={ROTULO}>
               E-mail (será o login)
             </label>
@@ -115,20 +117,6 @@ export function FormularioNovoPaciente() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={CAMPO}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="senha" className={ROTULO}>
-              Senha inicial
-            </label>
-            <input
-              id="senha"
-              name="senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="mínimo 6 caracteres"
               className={CAMPO}
             />
           </div>
@@ -207,7 +195,8 @@ export function FormularioNovoPaciente() {
         </div>
 
         <p className="rounded-xl bg-sunken px-4 py-3 text-[0.82rem] leading-relaxed text-muted">
-          Com o código de quem indicou preenchido, o cashback da indicação é
+          A senha provisória é gerada ao cadastrar, junto com a mensagem pronta
+          para o WhatsApp. Com o código de quem indicou preenchido, o cashback da indicação é
           liberado sozinho assim que esta pessoa fizer a primeira sessão.
         </p>
 

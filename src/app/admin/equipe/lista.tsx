@@ -8,10 +8,13 @@ import {
   type ProfissionalEditavel,
   type ServicoOpcao,
 } from "./formulario";
+import { AcessoProfissional } from "./acesso";
 
 export type ItemEquipe = ProfissionalEditavel & {
   nomesServicos: string[];
   sessoes: number;
+  /** Login do portal do profissional, quando existe */
+  acesso: { id: string; email: string; ultimoAcesso: string | null } | null;
 };
 
 /** Equipe cadastrada, com edição dentro do próprio item. */
@@ -102,6 +105,8 @@ export function ListaEquipe({
                   </button>
                 </form>
               </div>
+
+              <AcessoProfissional profissionalId={p.id} usuario={p.acesso} />
             </>
           )}
         </li>

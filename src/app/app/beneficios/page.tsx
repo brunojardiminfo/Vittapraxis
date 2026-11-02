@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { pacienteDaSessao } from "@/lib/paciente";
 import { dataCurta, moeda } from "@/lib/format";
-import { convite, nivelDe, regrasDoClube } from "@/lib/clube";
+import { convite, nivelDe, regrasDoClube, textoIndicacao } from "@/lib/clube";
 import { Card, CardHead, Pill, Progress, Vazio } from "@/components/ui";
 import {
   IconeEstrela,
@@ -111,8 +111,8 @@ export default async function BeneficiosPage() {
             acao={<IconePerfil className="h-4 w-4 text-accent" />}
           />
           <p className="mb-4 text-[0.86rem] text-muted">
-            Ganhe {moeda(regras.cashbackPorIndicacao)} de cashback a cada
-            indicação que fechar a primeira sessão.
+            Ganhe {textoIndicacao(regras)} de quem você indicar, em
+            cashback, quando a pessoa fizer essa sessão.
           </p>
           <Compartilhar
             codigo={paciente.codigoIndicacao}
@@ -135,7 +135,7 @@ export default async function BeneficiosPage() {
               ],
               [
                 `${confirmadas} indicações confirmadas`,
-                `${moeda(regras.cashbackPorIndicacao)} cada`,
+                `${regras.indicacaoPercentual.toLocaleString("pt-BR")}% da 1ª sessão`,
               ],
               [
                 `Nível ${regras.niveis[regras.niveis.length - 1].nome}`,

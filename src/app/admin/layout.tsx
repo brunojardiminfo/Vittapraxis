@@ -18,6 +18,7 @@ export default async function AdminLayout({
   const u = await usuarioAtual();
   if (!u) redirect("/entrar?proximo=/admin");
   if (u.papel !== "ADMIN") redirect(HOME_POR_PAPEL[u.papel]);
+  if (u.trocarSenha) redirect("/trocar-senha");
 
   return (
     <>

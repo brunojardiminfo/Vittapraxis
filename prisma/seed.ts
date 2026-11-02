@@ -296,6 +296,17 @@ async function main() {
     },
   });
 
+  // Login de demonstração do Portal do Profissional, ligado ao diretor
+  await prisma.usuario.create({
+    data: {
+      email: "kleber@vitapraxis.com.br",
+      nome: kleber.nome,
+      papel: "PROFISSIONAL",
+      senhaHash,
+      profissional: { connect: { id: kleber.id } },
+    },
+  });
+
   // Regras do Clube — a administração ajusta pela tela de configurações
   await prisma.configuracao.upsert({
     where: { id: "unica" },
@@ -809,6 +820,7 @@ async function main() {
 
   console.log("\nSeed concluído.");
   console.log("  Paciente:      sofia@exemplo.com / vitapraxis");
+  console.log("  Profissional:  kleber@vitapraxis.com.br / vitapraxis");
   console.log("  Administração: admin@vitapraxis.com.br / vitapraxis");
 }
 
