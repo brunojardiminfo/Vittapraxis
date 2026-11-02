@@ -131,6 +131,11 @@ export default async function ProFichaPage({
     for (const r of lerRegioes(e.regioesDor)) contagem[r] = (contagem[r] ?? 0) + 1;
   }
 
+  // O que o próprio paciente marcou no questionário mais recente que tem
+  // boneco preenchido — é o que ele sente agora, antes de entrar na sala
+  const relatoPaciente = [...indices].reverse().find((i) => i.regioesDor);
+  const regioesPaciente = lerRegioes(relatoPaciente?.regioesDor);
+
   const zap = linkWhatsapp(paciente.whatsapp ?? paciente.telefone);
 
   return (
@@ -334,18 +339,37 @@ export default async function ProFichaPage({
         {/* ---------------- COLUNA DIREITA ---------------- */}
         <div className="flex flex-col gap-6">
           <Card className="p-6">
-            <CardHead titulo="Mapa de dor" />
-            {Object.keys(contagem).length === 0 ? (
-              <Vazio>As regiões marcadas nos atendimentos aparecem aqui.</Vazio>
-            ) : (
-              <>
+            <CardHead titulo="Onde dói" />
+            {regioesPaciente.length > 0 ? (
+              <div className="mb-5">
+                <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-accent">
+                  Marcado pelo paciente ·{" "}
+                  {haQuantoTempo(relatoPaciente!.respondidoEm)}
+                </p>
+                <MapaCorporal
+                  key={relatoPaciente!.id}
+                  contagem={Object.fromEntries(regioesPaciente.map((r) => [r, 1]))}
+                />
+              </div>
+            ) : null}
+
+            {Object.keys(contagem).length > 0 ? (
+              <div className={regioesPaciente.length > 0 ? "border-t border-line pt-5" : ""}>
+                <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-muted">
+                  Registrado nos atendimentos
+                </p>
                 <MapaCorporal contagem={contagem} />
                 <p className="mt-2 text-[0.74rem] text-muted">
                   Somadas as últimas {Math.min(12, evolucoes.length)} evoluções
                   — quanto mais forte a cor, mais vezes a região apareceu.
                 </p>
-              </>
-            )}
+              </div>
+            ) : regioesPaciente.length === 0 ? (
+              <Vazio>
+                Quando o paciente marcar no questionário de bem-estar, ou você
+                marcar num atendimento, as regiões aparecem aqui.
+              </Vazio>
+            ) : null}
           </Card>
 
           <Card className="p-6">

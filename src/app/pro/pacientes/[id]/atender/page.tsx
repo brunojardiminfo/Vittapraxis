@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { profissionalId } from "@/lib/profissional";
-import { dataCurta, hora } from "@/lib/format";
+import { dataCurta, haQuantoTempo, hora } from "@/lib/format";
+import { lerRegioes } from "@/lib/mapa-corporal";
 import { FormularioAtendimento } from "./formulario";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,17 @@ export default async function AtenderPage({
           orderBy: { criadoEm: "desc" },
           take: 1,
           select: { regioesDor: true, orientacoes: true, criadoEm: true },
+        },
+        // O que o paciente marcou no boneco na última semana: o mapa do
+        // atendimento já começa com isso, e o profissional ajusta
+        indices: {
+          where: {
+            regioesDor: { not: null },
+            respondidoEm: { gte: new Date(Date.now() - 7 * 86_400_000) },
+          },
+          orderBy: { respondidoEm: "desc" },
+          take: 1,
+          select: { regioesDor: true, dor: true, respondidoEm: true },
         },
       },
     }),
@@ -71,6 +83,7 @@ export default async function AtenderPage({
         });
 
   const anterior = paciente.evolucoes[0];
+  const relato = paciente.indices[0];
 
   return (
     <>
@@ -123,6 +136,15 @@ export default async function AtenderPage({
           sessoes.some((s) => s.id === agendamento) ? agendamento! : sessoes[0]?.id ?? ""
         }
         servicos={servicos}
+        relatoPaciente={
+          relato
+            ? {
+                regioes: lerRegioes(relato.regioesDor),
+                dor: relato.dor,
+                quando: haQuantoTempo(relato.respondidoEm) ?? "",
+              }
+            : null
+        }
       />
     </>
   );

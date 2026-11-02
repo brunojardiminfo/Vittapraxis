@@ -7,6 +7,7 @@ import {
   type EstadoBemEstar,
 } from "@/app/actions/bem-estar";
 import { IconeCheck } from "@/components/icones";
+import { MapaCorporal } from "@/components/mapa-corporal";
 
 type Pergunta = {
   campo: "humor" | "sono" | "hidratacao" | "dor" | "exercitou";
@@ -75,6 +76,18 @@ const PERGUNTAS: Pergunta[] = [
   },
 ];
 
+/**
+ * Passos do questionário: as perguntas de escolha e, logo depois da dor, o
+ * boneco para a pessoa apontar onde dói. O boneco é opcional — quem não sente
+ * dor em lugar nenhum só segue.
+ */
+type Passo = Pergunta | "MAPA";
+const PASSOS: Passo[] = [
+  ...PERGUNTAS.slice(0, 4),
+  "MAPA",
+  ...PERGUNTAS.slice(4),
+];
+
 function BotaoEnviar({ desabilitado }: { desabilitado: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -101,13 +114,13 @@ export function WizardBemEstar({
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   // Controlado porque o React 19 limpa campos não-controlados após a action
   const [observacao, setObservacao] = useState("");
+  const [regioes, setRegioes] = useState<string[]>([]);
 
-  const total = PERGUNTAS.length;
+  const total = PASSOS.length;
   const concluido = estado.ok === true;
-  const passoAtual = PERGUNTAS[passo];
-  const respondida = passoAtual
-    ? respostas[passoAtual.campo] !== undefined
-    : true;
+  const passoAtual = PASSOS[passo];
+  const respondida =
+    passoAtual === "MAPA" || respostas[passoAtual.campo] !== undefined;
   const todasRespondidas = PERGUNTAS.every(
     (p) => respostas[p.campo] !== undefined
   );
@@ -150,9 +163,10 @@ export function WizardBemEstar({
           />
         ) : null
       )}
+      <input type="hidden" name="regioesDor" value={regioes.join("|")} />
 
       <div className="mb-9 flex justify-center gap-2" aria-hidden>
-        {PERGUNTAS.map((_, i) => (
+        {PASSOS.map((_, i) => (
           <span
             key={i}
             className={`h-2 rounded-full transition-all ${
@@ -169,36 +183,56 @@ export function WizardBemEstar({
       <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-accent">
         Pergunta {passo + 1} de {total}
       </p>
-      <h2 className="mb-2.5 text-[1.5rem]">{passoAtual.titulo}</h2>
-      <p className="mb-8 text-[0.92rem] text-muted">{passoAtual.ajuda}</p>
+      {passoAtual === "MAPA" ? (
+        <>
+          <h2 className="mb-2.5 text-[1.5rem]">Onde você sente dor?</h2>
+          <p className="mb-7 text-[0.92rem] text-muted">
+            Toque no boneco para marcar. Pode marcar mais de um lugar — e se não
+            sentir dor em nenhum, é só continuar.
+          </p>
+          <div className="mx-auto mb-9 max-w-sm">
+            <MapaCorporal
+              inicial={regioes}
+              aoMudar={setRegioes}
+              dica="Nenhuma região marcada."
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <h2 className="mb-2.5 text-[1.5rem]">{passoAtual.titulo}</h2>
+          <p className="mb-8 text-[0.92rem] text-muted">{passoAtual.ajuda}</p>
 
-      <div
-        role="radiogroup"
-        aria-label={passoAtual.titulo}
-        className="mb-9 flex flex-wrap justify-center gap-2"
-      >
-        {passoAtual.opcoes.map((o) => {
-          const selecionada = respostas[passoAtual.campo] === o.valor;
-          return (
-            <button
-              key={o.valor}
-              type="button"
-              role="radio"
-              aria-checked={selecionada}
-              onClick={() =>
-                setRespostas((r) => ({ ...r, [passoAtual.campo]: o.valor }))
-              }
-              className={`min-w-[5rem] flex-1 rounded-xl border px-2 py-4 text-[0.8rem] font-semibold transition-colors ${
-                selecionada
-                  ? "border-vp-green bg-vp-green text-[var(--on-brand)] dark:border-vp-gold dark:bg-vp-gold dark:text-vp-green-deep"
-                  : "border-line bg-sunken text-muted hover:border-accent"
-              }`}
-            >
-              {o.rotulo}
-            </button>
-          );
-        })}
-      </div>
+          <div
+            role="radiogroup"
+            aria-label={passoAtual.titulo}
+            className="mb-9 flex flex-wrap justify-center gap-2"
+          >
+            {passoAtual.opcoes.map((o) => {
+              const selecionada = respostas[passoAtual.campo] === o.valor;
+              return (
+                <button
+                  key={o.valor}
+                  type="button"
+                  role="radio"
+                  aria-checked={selecionada}
+                  onClick={() =>
+                    setRespostas((r) => ({ ...r, [passoAtual.campo]: o.valor }))
+                  }
+                  className={`min-w-[5rem] flex-1 rounded-xl border px-2 py-4 text-[0.8rem] font-semibold transition-colors ${
+                    selecionada
+                      ? "border-vp-green bg-vp-green text-[var(--on-brand)] dark:border-vp-gold dark:bg-vp-gold dark:text-vp-green-deep"
+                      : "border-line bg-sunken text-muted hover:border-accent"
+                  }`}
+                >
+                  {o.rotulo}
+                </button>
+              );
+            })}
+          </div>
+
+        </>
+      )}
 
       {passo === total - 1 ? (
         <div className="mb-7">

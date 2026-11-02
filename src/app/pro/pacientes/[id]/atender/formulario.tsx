@@ -33,8 +33,11 @@ export function FormularioAtendimento({
   sessoes,
   sessaoInicial,
   servicos,
+  relatoPaciente,
 }: {
   pacienteId: string;
+  /** O que o paciente marcou no questionário de bem-estar, se recente */
+  relatoPaciente: { regioes: string[]; dor: number; quando: string } | null;
   sessoes: { id: string; rotulo: string }[];
   sessaoInicial: string;
   servicos: Opcao[];
@@ -49,7 +52,9 @@ export function FormularioAtendimento({
   const [agendamentoId, setAgendamentoId] = useState(sessaoInicial);
   const [servicoId, setServicoId] = useState(servicos.length === 1 ? servicos[0].id : "");
   const [queixa, setQueixa] = useState("");
-  const [dor, setDor] = useState("");
+  const [dor, setDor] = useState(
+    relatoPaciente ? String(relatoPaciente.dor) : ""
+  );
   const [conduta, setConduta] = useState("");
   const [evolucao, setEvolucao] = useState("");
   const [orientacoes, setOrientacoes] = useState("");
@@ -123,7 +128,16 @@ export function FormularioAtendimento({
       <section className="grid gap-6 rounded-3xl border border-line bg-surface p-6 sm:p-7 md:grid-cols-[1fr_1.1fr]">
         <div>
           <p className={ROTULO}>Onde dói</p>
-          <MapaCorporal nome="regioesDor" />
+          {relatoPaciente ? (
+            <p className="mb-3 rounded-xl bg-sunken px-3.5 py-2.5 text-[0.8rem] leading-relaxed text-muted">
+              Já vem marcado com o que o paciente indicou no questionário{" "}
+              {relatoPaciente.quando}. Ajuste conforme a avaliação.
+            </p>
+          ) : null}
+          <MapaCorporal
+            nome="regioesDor"
+            inicial={relatoPaciente?.regioes ?? []}
+          />
         </div>
 
         <div>

@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { usuarioAtual } from "@/lib/auth";
+import { REGIOES } from "@/lib/mapa-corporal";
+
+const idsValidos = new Set(REGIOES.map((r) => r.id));
 
 const RespostaSchema = z.object({
   humor: z.coerce.number().int().min(1).max(5),
@@ -12,6 +15,14 @@ const RespostaSchema = z.object({
   dor: z.coerce.number().int().min(0).max(10),
   exercitou: z.boolean(),
   observacao: z.string().max(500).optional(),
+  /// Ids do mapa corporal; o que não for região conhecida é descartado
+  regioesDor: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const ids = (v ?? "").split("|").filter((id) => idsValidos.has(id));
+      return ids.length ? ids.join("|") : null;
+    }),
 });
 
 export type EstadoBemEstar = { ok?: boolean; erro?: string };
@@ -33,6 +44,7 @@ export async function registrarBemEstar(
     // O wizard manda todas as respostas como número; aqui 1 é sim
     exercitou: formData.get("exercitou") === "1",
     observacao: formData.get("observacao") || undefined,
+    regioesDor: formData.get("regioesDor") ?? undefined,
   });
 
   if (!parsed.success) {

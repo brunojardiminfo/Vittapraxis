@@ -94,30 +94,35 @@ function Boneco({
 /**
  * Mapa corporal para marcar onde dói.
  *
- * Editável no registro do atendimento: clicar marca e desmarca, e as regiões
- * vão num campo escondido para o formulário. Só leitura na ficha, com
- * contagem: aí a cor mais forte mostra o que mais se repete nas evoluções.
+ * Editável no registro do atendimento e no questionário do paciente: clicar
+ * marca e desmarca, e as regiões vão num campo escondido (ou para quem
+ * escuta aoMudar). Só leitura na ficha, com contagem: aí a cor mais forte
+ * mostra o que mais se repete.
  */
 export function MapaCorporal({
   nome,
   inicial = [],
   contagem,
+  aoMudar,
+  dica = "Toque nas regiões onde a pessoa sente dor.",
 }: {
-  /** Nome do campo do formulário; sem ele o mapa é só leitura */
+  /** Nome do campo do formulário */
   nome?: string;
   inicial?: string[];
   contagem?: Record<string, number>;
+  /** Para quem guarda as regiões fora do mapa, como o questionário em passos */
+  aoMudar?: (ids: string[]) => void;
+  dica?: string;
 }) {
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set(inicial));
-  const editavel = Boolean(nome);
+  const editavel = Boolean(nome || aoMudar);
 
   function alternar(id: string) {
-    setMarcadas((atual) => {
-      const novo = new Set(atual);
-      if (novo.has(id)) novo.delete(id);
-      else novo.add(id);
-      return novo;
-    });
+    const novo = new Set(marcadas);
+    if (novo.has(id)) novo.delete(id);
+    else novo.add(id);
+    setMarcadas(novo);
+    aoMudar?.([...novo]);
   }
 
   const lista = contagem
@@ -149,9 +154,7 @@ export function MapaCorporal({
           lista.join(" · ")
         ) : (
           <span className="text-muted">
-            {editavel
-              ? "Toque nas regiões onde a pessoa sente dor."
-              : "Nenhuma região marcada."}
+            {editavel ? dica : "Nenhuma região marcada."}
           </span>
         )}
       </p>

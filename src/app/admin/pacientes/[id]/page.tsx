@@ -547,6 +547,13 @@ export default async function FichaPacientePage({
                     : "Não havia se exercitado no dia"}
                 </p>
 
+                {ultimoIndice.regioesDor ? (
+                  <p className="mt-2 text-[0.82rem]">
+                    <span className="text-muted">Onde dói: </span>
+                    {rotulosDe(lerRegioes(ultimoIndice.regioesDor)).join(" · ")}
+                  </p>
+                ) : null}
+
                 {ultimoIndice.observacao ? (
                   <p className="mt-3 rounded-xl bg-sunken px-4 py-3 text-[0.84rem] italic leading-relaxed">
                     &ldquo;{ultimoIndice.observacao}&rdquo;

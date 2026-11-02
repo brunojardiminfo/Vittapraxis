@@ -239,6 +239,8 @@ model IndiceBemEstar {
   dor           Int // 0..10
   /// Se já se exercitou hoje
   exercitou     Boolean  @default(false)
+  /// Onde a própria pessoa marcou que dói, no boneco — ids separados por "|"
+  regioesDor    String?
   observacao    String?
   respondidoEm  DateTime @default(now())
 

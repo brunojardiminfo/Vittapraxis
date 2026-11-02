@@ -31,8 +31,8 @@ export default async function BemEstarPage() {
       <header className="mb-7">
         <h1 className="text-[1.9rem]">Índice de Bem-Estar</h1>
         <p className="mt-1 text-sm text-muted">
-          Cinco perguntas rápidas sobre humor, sono, hidratação, dor e
-          exercício
+          Perguntas rápidas sobre humor, sono, hidratação, dor — e onde ela
+          aparece — e exercício
         </p>
       </header>
 
