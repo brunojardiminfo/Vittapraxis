@@ -108,7 +108,7 @@ export default async function AdminDestaquesPage() {
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.1fr] lg:items-start [&>*]:min-w-0">
         <FormularioDestaque imagens={imagens} enviadas={enviadas} />
 
         <section>

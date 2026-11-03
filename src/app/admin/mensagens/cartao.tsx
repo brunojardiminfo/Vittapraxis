@@ -146,7 +146,7 @@ export function CartaoMensagem({
   const [editando, setEditando] = useState(false);
 
   return (
-    <li className="flex flex-col rounded-2xl border border-line bg-surface p-6">
+    <li className="flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-6">
       {editando ? (
         <FormularioMensagem
           mensagem={mensagem}
@@ -161,7 +161,7 @@ export function CartaoMensagem({
             <p className="mt-1 text-[0.8rem] text-muted">{mensagem.para}</p>
           ) : null}
 
-          <pre className="mt-4 flex-1 whitespace-pre-wrap rounded-xl bg-sunken px-4 py-3.5 font-sans text-[0.86rem] leading-relaxed">
+          <pre className="mt-4 flex-1 whitespace-pre-wrap break-words rounded-xl bg-sunken px-4 py-3.5 font-sans text-[0.86rem] leading-relaxed">
             {mensagem.pronto}
           </pre>
 

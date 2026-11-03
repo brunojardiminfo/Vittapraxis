@@ -1,17 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { enviarImagem, type EstadoUpload } from "@/app/actions/arquivos";
 
 export type ImagemEnviada = { id: string; caminho: string; nome: string };
 
-function BotaoEnviar() {
-  const { pending } = useFormStatus();
+/**
+ * Aponta para o formulário de envio pelo atributo form: o botão mora dentro
+ * do formulário do cartão, e sem isso enviaria o cartão inteiro.
+ */
+function BotaoEnviar({ form, pending }: { form: string; pending: boolean }) {
   return (
     <button
       type="submit"
+      form={form}
       disabled={pending}
       className="rounded-full border border-accent px-4 py-2 text-[0.8rem] font-semibold text-accent transition-colors hover:bg-accent hover:text-[var(--on-brand)] disabled:cursor-not-allowed disabled:opacity-60"
     >
@@ -41,10 +45,16 @@ export function SeletorImagem({
   /** Imagens que a clínica subiu */
   enviadas: ImagemEnviada[];
 }) {
-  const [estado, formAction] = useActionState<EstadoUpload, FormData>(
-    enviarImagem,
-    {}
-  );
+  const [estado, formAction, enviando] = useActionState<
+    EstadoUpload,
+    FormData
+  >(enviarImagem, {});
+  // Um id por seletor: a lista de cartões em edição pode ter vários na tela
+  const idEnvio = `envio-imagem-${useId().replace(/:/g, "")}`;
+  // O formulário de envio vai direto no <body>: dentro do formulário do
+  // cartão ele seria um <form> aninhado, que o HTML não permite
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
   const [escolhida, setEscolhida] = useState(valorInicial);
   const [novas, setNovas] = useState<string[]>([]);
   const campoArquivo = useRef<HTMLInputElement>(null);
@@ -75,18 +85,17 @@ export function SeletorImagem({
         </span>
       </p>
 
-      {/* O envio é um formulário à parte: um <form> dentro de outro não é
-          permitido em HTML, então a ação vai no próprio botão. */}
+      {/* O envio é um formulário à parte, ligado pelo atributo form */}
       <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-xl border border-dashed border-line bg-sunken p-3">
         <input
           ref={campoArquivo}
           type="file"
           name="arquivo"
           accept="image/jpeg,image/png,image/webp,image/avif"
-          form="envio-imagem"
+          form={idEnvio}
           className="min-w-0 flex-1 text-[0.82rem] text-muted file:mr-3 file:rounded-full file:border file:border-line file:bg-surface file:px-4 file:py-2 file:text-[0.8rem] file:font-semibold file:text-ink hover:file:border-accent"
         />
-        <BotaoEnviar />
+        <BotaoEnviar form={idEnvio} pending={enviando} />
       </div>
 
       {estado.erro ? (
@@ -142,8 +151,12 @@ export function SeletorImagem({
         </>
       ) : null}
 
-      {/* Alvo do input de arquivo, fora do formulário do cartão */}
-      <form id="envio-imagem" action={formAction} className="hidden" />
+      {montado
+        ? createPortal(
+            <form id={idEnvio} action={formAction} className="hidden" />,
+            document.body
+          )
+        : null}
     </div>
   );
 }

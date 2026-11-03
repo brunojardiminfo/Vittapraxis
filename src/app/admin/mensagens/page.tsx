@@ -68,7 +68,7 @@ export default async function MensagensPage() {
       {mensagens.length === 0 ? (
         <Vazio>Nenhuma mensagem ainda. Crie a primeira no botão acima.</Vazio>
       ) : (
-        <ul className="grid gap-5 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {mensagens.map((m) => (
             <CartaoMensagem
               key={m.id}

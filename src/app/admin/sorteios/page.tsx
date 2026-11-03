@@ -69,7 +69,7 @@ export default async function SorteiosPage() {
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.15fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.15fr] lg:items-start [&>*]:min-w-0">
         <FormularioSorteio niveis={regras.niveis.map((n) => n.nome)} />
 
         <section>

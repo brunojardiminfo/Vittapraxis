@@ -250,7 +250,7 @@ export default async function FichaPacientePage({
         </p>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.15fr_1fr] lg:items-start [&>*]:min-w-0">
         {/* ---------------- COLUNA ESQUERDA ---------------- */}
         <div className="flex flex-col gap-6">
           <FormularioCadastro
