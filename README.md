@@ -192,6 +192,33 @@ quebraria. Os demais papéis continuam isolados entre si.
 | `npm run db:migrate` | Cria uma migration nova a partir do schema |
 | `npm run db:deploy` | Aplica as migrations pendentes |
 | `npm run db:studio` | Prisma Studio |
+| `npm run test:e2e` | Teste de ponta a ponta (veja abaixo) |
+
+## Teste de ponta a ponta
+
+`testes/e2e.cjs` abre o navegador e passa pela plataforma inteira: todas as
+páginas no computador e no celular, quem pode acessar o quê, senhas, regras
+do Clube (pontos, indicação de 10%, vouchers), o mapa de dor e o portal do
+profissional. Rode antes de publicar qualquer alteração.
+
+Ele **apaga e recria os dados de demonstração**, então só roda com um banco
+local — se `DATABASE_URL` apontar para outro lugar, ele se recusa.
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run build && npm start
+```
+
+Com o servidor no ar, em outro terminal:
+
+```bash
+npm run test:e2e
+```
+
+A última linha mostra quantos passaram; cada falha aparece com o motivo.
 
 ## Antes de virar produção de verdade
 
