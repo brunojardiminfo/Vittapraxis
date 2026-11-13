@@ -45,7 +45,7 @@ export default async function BeneficiosPage() {
 
   // O convite precisa da URL pública real, que muda entre local e produção
   const cabecalhos = await headers();
-  const host = cabecalhos.get("host") ?? "vita-praxis.vercel.app";
+  const host = cabecalhos.get("host") ?? "vitapraxis.com.br";
   const protocolo = host.startsWith("localhost") ? "http" : "https";
   const link = convite(paciente.codigoIndicacao, `${protocolo}://${host}`);
 

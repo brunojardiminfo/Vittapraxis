@@ -50,5 +50,5 @@ export const CLINICA = {
   },
 
   /// Endereço público do portal, usado nos links das mensagens de WhatsApp
-  site: "https://vita-praxis.vercel.app",
+  site: "https://vitapraxis.com.br",
 } as const;
